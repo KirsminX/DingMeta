@@ -3,43 +3,50 @@ name: Sync to GitLab and GitCode
 on:
   push:
     branches:
-      - dev
       - main
+      - dev
 
 jobs:
-  sync:
+  push_to_remotes:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
-      - name: Set up SSH
+      - name: Setup SSH Keys
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.GITLAB_SSH_KEY }}" > ~/.ssh/id_rsa_gitlab
           echo "${{ secrets.GITCODE_SSH_KEY }}" > ~/.ssh/id_rsa_gitcode
           chmod 600 ~/.ssh/id_rsa_gitlab
           chmod 600 ~/.ssh/id_rsa_gitcode
-      - name: Configure SSH
-        run: |
-          echo -e "Host gitlab.com\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
-
-
-      - name: Add GitLab to known hosts
-        run: |
           ssh-keyscan gitlab.com >> ~/.ssh/known_hosts
+          ssh-keyscan gitcode.com >> ~/.ssh/known_hosts
+          ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+          ssh-add ~/.ssh/id_rsa_gitlab
+          ssh-add ~/.ssh/id_rsa_gitcode
 
-      - name: Add GitCode to known hosts
+      - name: Configure Git
         run: |
-          ssh-keyscan gitcode.net >> ~/.ssh/known_hosts
+          git config user.name "KirsminX"
+          git config user.email "dino_doge@qq.com"
+
+      - name: Add GitLab remote
+        run: |
+          git remote add gitlab git@gitlab.com:KirsminX/dingmeta.git
+
+      - name: Add GitCode remote
+        run: |
+          git remote add gitcode git@gitcode.com:KirsminX/dingmeta.git
 
       - name: Push to GitLab
         run: |
-          git remote add gitlab git@gitlab.com:KirsminX/dingmeta.git
-          GIT_SSH_COMMAND="ssh -i ~/.ssh/id_rsa_gitlab" git push gitlab ${{ github.ref }} --force
+          GIT_SSH_COMMAND="ssh -i ~/.ssh/id_rsa_gitlab" git push gitlab ${GITHUB_REF#refs/heads/}:refs/heads/${GITHUB_REF#refs/heads/} --force
 
       - name: Push to GitCode
         run: |
-          git remote add gitcode git@gitcode.com:KirsminV/DingMeta.git
-          GIT_SSH_COMMAND="ssh -i ~/.ssh/id_rsa_gitcode" git push gitcode ${{ github.ref }} --force
+          GIT_SSH_COMMAND="ssh -i ~/.ssh/id_rsa_gitcode" git push gitcode ${GITHUB_REF#refs/heads/}:refs/heads/${GITHUB_REF#refs/heads/} --force
+
