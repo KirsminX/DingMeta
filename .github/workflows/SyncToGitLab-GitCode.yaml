@@ -21,6 +21,10 @@ jobs:
           echo "${{ secrets.GITCODE_SSH_KEY }}" > ~/.ssh/id_rsa_gitcode
           chmod 600 ~/.ssh/id_rsa_gitlab
           chmod 600 ~/.ssh/id_rsa_gitcode
+      - name: Configure SSH
+        run: |
+          echo -e "Host gitlab.com\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
+
 
       - name: Add GitLab to known hosts
         run: |
