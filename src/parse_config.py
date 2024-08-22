@@ -88,7 +88,20 @@ class Config:
             logging.error("配置文件不符合 TOML 格式！")
             self.create()
 
-    def get(self, _type: str, key: str, int_key: str = None):
+    def manage_bot(self, _type: str, display: bool = True):
+        bots = self.__get("Bot")
+        if _type == "list":
+            if len(bots) == 0:
+                if display:
+                    logging.warning("（；´д｀）ゞ 暂时没有机器人")
+                return None
+            else:
+                if display:
+                    logging.info("（；´д｀）ゞ 找到以下机器人：")
+                    for bot in bots:
+                        logging.info(f"{bot}")
+                return bots
+    def __get(self, _type: str, key: str = None, int_key: str = None):
         _config = toml.load(self.path)
         if int_key is None:
             try:
