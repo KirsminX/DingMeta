@@ -1,0 +1,41 @@
+name: Sync to GitLab and GitCode
+
+on:
+  push:
+    branches:
+      - dev
+      - main
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.GITLAB_SSH_KEY }}" > ~/.ssh/id_rsa_gitlab
+          echo "${{ secrets.GITCODE_SSH_KEY }}" > ~/.ssh/id_rsa_gitcode
+          chmod 600 ~/.ssh/id_rsa_gitlab
+          chmod 600 ~/.ssh/id_rsa_gitcode
+
+      - name: Add GitLab to known hosts
+        run: |
+          ssh-keyscan gitlab.com >> ~/.ssh/known_hosts
+
+      - name: Add GitCode to known hosts
+        run: |
+          ssh-keyscan gitcode.net >> ~/.ssh/known_hosts
+
+      - name: Push to GitLab
+        run: |
+          git remote add gitlab git@gitlab.com:KirsminX/dingmeta.git
+          GIT_SSH_COMMAND="ssh -i ~/.ssh/id_rsa_gitlab" git push gitlab ${{ github.ref }} --force
+
+      - name: Push to GitCode
+        run: |
+          git remote add gitcode git@gitcode.com:KirsminV/DingMeta.git
+          GIT_SSH_COMMAND="ssh -i ~/.ssh/id_rsa_gitcode" git push gitcode ${{ github.ref }} --force
