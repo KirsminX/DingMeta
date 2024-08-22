@@ -25,7 +25,7 @@ jobs:
           chmod 600 ~/.ssh/id_rsa_gitcode
           ssh-keyscan gitlab.com >> ~/.ssh/known_hosts
           ssh-keyscan gitcode.com >> ~/.ssh/known_hosts
-          ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+          eval $(ssh-agent -s)
           ssh-add ~/.ssh/id_rsa_gitlab
           ssh-add ~/.ssh/id_rsa_gitcode
 
@@ -49,4 +49,3 @@ jobs:
       - name: Push to GitCode
         run: |
           GIT_SSH_COMMAND="ssh -i ~/.ssh/id_rsa_gitcode" git push gitcode ${GITHUB_REF#refs/heads/}:refs/heads/${GITHUB_REF#refs/heads/} --force
-
