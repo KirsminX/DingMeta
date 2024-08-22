@@ -49,6 +49,6 @@ class File:
             except Exception as e:
                 raise error.DownloadError(f"下载失败！原因：{e}")
 if __name__ == "__main__":
-    # 初始化 logging
+    # 测试
     app = File("https://cdn.aliyundrive.net/downloads/apps/desktop/aDrive-6.2.0.exe", "test.txt")
     app.download()
