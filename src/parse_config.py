@@ -1,7 +1,11 @@
-import logging, os.path, sys, toml, time;
-from distutils.command.config import config
+import logging
+import os.path
+import sys
+import time
+import toml
 
-from prompt_toolkit import prompt; from ask import ask
+from ask import ask
+
 # 日志模块
 logging.basicConfig(format="%(asctime)s %(levelname)s: %(message)s", datefmt="%Y/%m/%d %H:%M", level=logging.INFO); logging.Formatter.converter = time.gmtime
 """默认配置文件"""
@@ -22,20 +26,20 @@ server = ["https://github.com/KirsminX/DingMeta"]
 
 [Bot]
 # 可添加多个机器人，例如 [Bot.XiaoMing]；注意每一个代码块的格式必须严格匹配
-[Bot.XiaoQiang]
-name = "XiaoQiang"          # 机器人名称（请修改）
-connect_type = "http"       # 连接方式（默认：http） 注意：stream 模式目前没有计划添加，如有需求请提出 issue
+#  [Bot.XiaoQiang]
+#  name = "XiaoQiang"          # 机器人名称（请修改）
+#  connect_type = "http"       # 连接方式（默认：http） 注意：stream 模式目前没有计划添加，如有需求请提出 issue
 # 机器人密钥（请修改） 注意：反馈问题时请删除此字段，妥善保存密钥
-token = "-"
-port = 8018                 # 端口（默认：8018） 注意：端口不能被占用（包括其他机器人）
+#  token = "-"
+#  port = 8018                 # 端口（默认：8018） 注意：端口不能被占用（包括其他机器人）
 # SSL 设置
 # HTTP 不再被支持，若 /Config 目录下无证书将自动生成证书
 # 公钥路径（请将证书放置在 /Config 下，默认情况下不需要修改此字段）
-public_key = "public.pem"
+#  public_key = "public.pem"
 # 密钥路径（请将证书放置在 /Config 下，默认情况下不需要修改此字段）
-private_key = "private.pem"
+#  private_key = "private.pem"
 # 所有者（填写 uid，留空使用 -）
-owner = "-"
+#  owner = "-"
 
 [Plugin]
 auto_update = true          # 自动更新（默认：true，可选 true/false）
@@ -84,17 +88,17 @@ class Config:
             logging.error("配置文件不符合 TOML 格式！")
             self.create()
 
-    def get(self, type: str, key: str, int_key: str = None):
+    def get(self, _type: str, key: str, int_key: str = None):
         _config = toml.load(self.path)
         if int_key is None:
             try:
-                return _config[type][key]
+                return _config[_type][key]
             except KeyError:
                 logging.error(f"找不到 {type} -> {key}！")
                 self.create()
         else:
             try:
-                return _config[type][key][int_key]
+                return _config[_type][key][int_key]
             except KeyError:
                 logging.error(f"找不到 {type}！")
                 self.create()
