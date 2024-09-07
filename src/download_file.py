@@ -1,54 +1,53 @@
+import logging, os
+
 import requests, time
 from alive_progress import alive_bar
 
-import error
-
 """
-文件处理
+下载文件
+输入值
+url「下载链接」
+path 「下载目录」
+返回值
+True 「下载成功」
+False 「下载失败」
 """
-
-
-class File:
-    def __init__(self, url: str, path: str):
-        self.url = url
-        self.path = path
-
-    def download(self):
-        url = self.url
-        path = self.path
-        try:
-            response = requests.get(url, stream=True)
-            response.raise_for_status()
-        except requests.exceptions.RequestException as e:
-            raise error.DownloadError(f"下载失败！原因：{e}")
-
+def download(url: str, path: str) -> bool:
+    if os.path.isfile(path):
+        logging.warning(f"文件「{path}」已存在")
+        return True
+    try:
+        response = requests.get(url, stream=True)
+        response.raise_for_status()
         total_size = int(response.headers.get('content-length', 0))
-        block_size = 1024 * 10  # 块大小设置为10KB
-
+        if total_size == 0:
+            logging.error(f"下载「{path}」！原因：文件「{path}」大小为 0")
+            return False
+        block_size = 1024 * 10
         progress_bar_style = {
             "title": f"下载「{path}」",
             "bar": "blocks",
             "stats": ""
         }
-
         start_time = time.time()
         with alive_bar(total_size // block_size, enrich_print=False, manual=True, **progress_bar_style) as bar:
-            try:
-                with open(path, 'wb') as file:
-                    downloaded = 0
-                    for data in response.iter_content(block_size):
-                        current_time = time.time()
-                        elapsed_time = current_time - start_time
-                        file.write(data)
-                        downloaded += len(data)
-                        bar(downloaded / total_size)  # 更新进度条
+            with open(path, 'wb') as file:
+                downloaded = 0
+                for data in response.iter_content(block_size):
+                    file.write(data)
+                    downloaded += len(data)
+                    bar(downloaded / total_size)
+                    elapsed_time = time.time() - start_time
+                    if elapsed_time > 0:
+                        speed = (downloaded / (1024 * 1024)) / elapsed_time
+                        bar.text(f'速度: {speed:.2f} MB/s')
+        return True
+    except requests.exceptions.RequestException as e:
+        logging.error(f"下载「{path}」失败！原因：「{e}」")
+    except Exception as e:
+        logging.error(f"下载「{path}」失败！原因：「{e}」")
+    return False
 
-                        if elapsed_time > 0:
-                            speed = (downloaded / (1024 * 1024)) / elapsed_time  # 以MB/s为单位计算速度
-                            bar.text(f'速度: {speed:.2f} MB/s')
-            except Exception as e:
-                raise error.DownloadError(f"下载失败！原因：{e}")
 if __name__ == "__main__":
-    # 测试
-    app = File("https://cdn.aliyundrive.net/downloads/apps/desktop/aDrive-6.2.0.exe", "test.txt")
-    app.download()
+    app = download("https://cdn.aliyundrive.net/downloads/apps/desktop/aDrive-6.2.0.exe", "../test_no_update/app.exe")
+    print(f"Download Mod returned:{app}")
