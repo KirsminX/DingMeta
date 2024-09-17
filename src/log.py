@@ -29,19 +29,22 @@ class Log:
             "戌时": (19, 21),
             "亥时": (21, 23)
         }
+        self.color = {
+            "INFO": '<p style="color: rgb(0, 184, 169);">[信息]</p>',
+            "WARNING": '<p style="color: rgb(255, 222, 125);">[警告]</p>',
+            "ERROR": '<p style="color: rgb(246, 65, 108);">[错误]</p>'
+        }
 
     def __get_formatted_time__(self, timezone: str = "Asia/Shanghai") -> str:
-        time = datetime.now(pytz.timezone(timezone))
-        time_periods = self.time_periods
-        period = ""
-        for period, (start_hour, end_hour) in time_periods.items():
-            if start_hour <= time.hour < end_hour or (start_hour == 23 and time.hour == 0):
-                break
-        am_pm = "上午" if time.hour < 12 else "下午"
-        hour_12 = time.hour % 12
-        if hour_12 == 0:
-            hour_12 = 12
-        return f"{time.year}/{time.month}/{time.day} {am_pm} {hour_12}:{time.minute}:{time.second} 「{period}」 "
+        current_time = datetime.now(pytz.timezone(timezone))
+        hour = current_time.hour
+        minute = current_time.minute
+        second = current_time.second
+        period = next((p for p, (start, end) in self.time_periods.items()
+                       if start <= hour < end or (start == 23 and hour == 0)), "")
+        am_pm = "上午" if hour < 12 else "下午"
+        hour_12 = hour % 12 or 12
+        return f"{current_time.year}/{current_time.month}/{current_time.day} {am_pm} {hour_12}:{minute}:{second} 「{period}」"
     @staticmethod
     def __write__(msg: str):
         if not os.path.isfile("Log"):
@@ -50,8 +53,7 @@ class Log:
             file.write(f"{msg}\n")
     @staticmethod
     def info(self, msg: str):
-        html_msg = f'<p style="color: rgb(0, 184, 169);">[INFO]</p><p>{msg}</p>'
-        print(HTML(html_msg))
+        print(HTML(f"{self.color['INFO']}{msg}"))
         if self.written:
             self.__write__(f"[INFO] {msg}")
         if self.memorize:
