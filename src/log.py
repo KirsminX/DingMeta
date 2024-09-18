@@ -3,10 +3,12 @@
 输入值
 """
 import os
-from prompt_toolkit import print_formatted_text as print, HTML
-from prompt_toolkit.formatted_text import HTML
-import pytz
 from datetime import datetime
+
+import pytz
+from prompt_toolkit import print_formatted_text as print
+from prompt_toolkit.formatted_text import HTML
+
 
 class Log:
     def __init__(self, debug: bool, written: bool = True, memorize: bool = True, timezone: str = "Asia/Shanghai"):
