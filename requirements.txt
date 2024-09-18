@@ -1,6 +1,6 @@
-prompt_toolkit~=3.0.47
-sanic~=24.6.0
-Pygments~=2.18.0
-toml~=0.10.2
-requests~=2.32.3
-alive-progress~=3.1.5
+pytz>=2024.2
+prompt_toolkit>=3.0.47
+rtoml>=0.11.0
+requests>=2.32.3
+alive-progress>=3.1.5
+toml>=0.10.2
