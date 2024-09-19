@@ -1,7 +1,3 @@
-"""
-日志记录模块
-输入值
-"""
 import os
 from datetime import datetime
 
@@ -9,7 +5,16 @@ import pytz
 from prompt_toolkit import print_formatted_text as print
 from prompt_toolkit.formatted_text import HTML
 
-
+"""
+日志
+使用方法：
+# 导入日志模块
+from log import Log
+# 实例化
+log = Log(debug = True, written = True, memorize = True, timezone = "Asia/Shanghai"  
+# 记录日志（类型可选 debug/info/warning/error）
+log.log("info","普通日志")
+"""
 class Log:
     def __init__(self, debug: bool, written: bool = True, memorize: bool = True, timezone: str = "Asia/Shanghai"):
         self.written = written
