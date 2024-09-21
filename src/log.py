@@ -16,6 +16,11 @@ log = Log(debug = True, written = True, memorize = True, timezone = "Asia/Shangh
 log.log("info","普通日志")
 """
 class Log:
+    __instance__ = None
+    def __new__(cls, *args, **kwargs):
+        if Log.__instance__ is None:
+            Log.__instance__ = object.__new__(cls)
+        return Log.__instance__
     def __init__(self, debug: bool, written: bool = True, memorize: bool = True, timezone: str = "Asia/Shanghai"):
         self.written = written
         self.memorize = memorize
