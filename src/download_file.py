@@ -1,5 +1,5 @@
-import logging, os
-
+import os
+from main import log                    # type: ignore
 import requests, time
 from alive_progress import alive_bar
 
@@ -14,14 +14,14 @@ False 「下载失败」
 """
 def download(url: str, path: str) -> bool:
     if os.path.isfile(path):
-        logging.warning(f"文件「{path}」已存在")
+        log.warning(f"文件「{path}」已存在")
         return True
     try:
         response = requests.get(url, stream=True)
         response.raise_for_status()
         total_size = int(response.headers.get('content-length', 0))
         if total_size == 0:
-            logging.error(f"下载「{path}」！原因：文件「{path}」大小为 0")
+            log.error(f"下载「{path}」！原因：文件「{path}」大小为 0")
             return False
         block_size = 1024 * 10
         progress_bar_style = {
@@ -43,9 +43,9 @@ def download(url: str, path: str) -> bool:
                         bar.text(f'速度: {speed:.2f} MB/s')
         return True
     except requests.exceptions.RequestException as e:
-        logging.error(f"下载「{path}」失败！原因：「{e}」")
+        log.error(f"下载「{path}」失败！原因：「{e}」")
     except Exception as e:
-        logging.error(f"下载「{path}」失败！原因：「{e}」")
+        log.error(f"下载「{path}」失败！原因：「{e}」")
     return False
 
 if __name__ == "__main__":
