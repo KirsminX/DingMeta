@@ -3,36 +3,25 @@ from datetime import datetime
 import pytz
 
 """
-日志
-使用方法：
-# 导入日志模块
-from log import Log
-# 实例化
-log = Log(debug=True, written=True, memorize=True, timezone="Asia/Shanghai")
-# 记录日志（类型可选 debug/info/warning/error）
-log.log("info", "普通日志")
-也可以使用
-log.info("普通日志")
-（可替换为 debug/warning/error）
+日志模块
 """
-
 class Log:
-    __instance__ = None
+    _instance = None
 
     def __new__(cls, *args, **kwargs):
-        if Log.__instance__ is None:
-            Log.__instance__ = object.__new__(cls)
-        return Log.__instance__
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
 
-    def __init__(self, debug: bool, written: bool = True, memorize: bool = True, timezone: str = "Asia/Shanghai"):
-        if not hasattr(self, 'initialized'):
-            self.initialized = True
+    def __init__(self, debug: bool = False, written: bool = True, memorize: bool = True,
+                 timezone: str = "Asia/Shanghai"):
+        if not hasattr(self, 'initialized'):  # 防止 __init__ 被多次调用
             self.written = written
             self.memorize = memorize
             self.logs = []
-            self.debug_status = debug
+            self.debug_statu = debug
             self.timezone = timezone
-
+            self.log_file = "Log"
             self.color = {
                 "DEBUG": "\033[38;2;135;133;162m[调试]\033[0m",
                 "INFO": "\033[38;2;0;184;169m[信息]\033[0m",
@@ -40,50 +29,38 @@ class Log:
                 "ERROR": "\033[38;2;246;65;108m[错误]\033[0m"
             }
             self.time_periods = {
-                "子": (23, 1),
-                "丑": (1, 3),
-                "寅": (3, 5),
-                "卯": (5, 7),
-                "辰": (7, 9),
-                "巳": (9, 11),
-                "午": (11, 13),
-                "未": (13, 15),
-                "申": (15, 17),
-                "酉": (17, 19),
-                "戌": (19, 21),
-                "亥": (21, 23)
+                "子": (23, 1), "丑": (1, 3), "寅": (3, 5), "卯": (5, 7),
+                "辰": (7, 9), "巳": (9, 11), "午": (11, 13), "未": (13, 15),
+                "申": (15, 17), "酉": (17, 19), "戌": (19, 21), "亥": (21, 23)
             }
-            if self.written and not os.path.isfile("Log"):
-                try:
-                    with open("Log", "w") as file:
-                        pass
-                except IOError as e:
-                    print(f"Error creating log file: {e}")
+            if self.written and not os.path.isfile(self.log_file):
+                open(self.log_file, "w").close()
+            self.initialized = True
 
     def __get_formatted_time__(self) -> str:
         current_time = datetime.now(pytz.timezone(self.timezone))
-        hour = current_time.hour
-        minute = current_time.minute
-        second = current_time.second
         period = next((p for p, (start, end) in self.time_periods.items()
-                       if start <= hour < end or (start == 23 and hour == 0)), "")
-        am_pm = "上午" if hour < 12 else "下午"
-        hour_12 = hour % 12 or 12
-        return f"{current_time.year}/{current_time.month}/{current_time.day} {am_pm} {hour_12}:{minute}:{second} 「{period}」"
+                       if start <= current_time.hour < end or (start == 23 and current_time.hour == 0)), "")
+        return current_time.strftime(f"%Y/%m/%d %p %I:%M:%S 「{period}」")
 
-    @staticmethod
-    def __write__(msg: str):
-        try:
-            with open("Log", "a") as file:
-                file.write(f"{msg}\n")
-        except IOError as e:
-            print(f"Error writing to log file: {e}")
+    def __write__(self, msg: str):
+        with open(self.log_file, "a") as file:
+            file.write(f"{msg}\n")
 
     def log(self, level: str, msg: str):
-        formatted_msg = self.__get_msg__(level, msg)
-        print(self.__get_display_msg__(level, msg))
+        level = level.upper()
+        if level not in self.color:
+            raise ValueError(f"不允许未知日志级别 {level}")
+
+        formatted_time = self.__get_formatted_time__()
+        formatted_msg = f"{formatted_time} [{level}] {msg}"
+        display_msg = f"{formatted_time} {self.color[level]} {msg}"
+
+        print(display_msg)
+
         if self.written:
             self.__write__(formatted_msg)
+
         if self.memorize:
             self.logs.append(formatted_msg)
 
@@ -91,7 +68,7 @@ class Log:
         self.log("INFO", msg)
 
     def debug(self, msg: str):
-        if self.debug_status:
+        if self.debug_statu:
             self.log("DEBUG", msg)
 
     def warning(self, msg: str):
@@ -99,9 +76,3 @@ class Log:
 
     def error(self, msg: str):
         self.log("ERROR", msg)
-
-    def __get_msg__(self, level: str, message: str) -> str:
-        return f"{self.__get_formatted_time__()} [{level}] {message}"
-
-    def __get_display_msg__(self, level: str, message: str) -> str:
-        return f"{self.__get_formatted_time__()} {self.color[level]} {message}"
