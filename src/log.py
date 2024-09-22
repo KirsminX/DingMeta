@@ -31,14 +31,26 @@ class Log:
         self.debug_statu = debug
         self.timezone = timezone
 
-        # 手动使用 RGB 颜色定义日志的颜色
         self.color = {
             "DEBUG": "\033[38;2;135;133;162m[调试]\033[0m",
             "INFO": "\033[38;2;0;184;169m[信息]\033[0m",
             "WARNING": "\033[38;2;255;222;125m[警告]\033[0m",
             "ERROR": "\033[38;2;246;65;108m[错误]\033[0m"
         }
-
+        self.time_periods = {
+            "子": (23, 1),
+            "丑": (1, 3),
+            "寅": (3, 5),
+            "卯": (5, 7),
+            "辰": (7, 9),
+            "巳": (9, 11),
+            "午": (11, 13),
+            "未": (13, 15),
+            "申": (15, 17),
+            "酉": (17, 19),
+            "戌": (19, 21),
+            "亥": (21, 23)
+        }
         if self.written and not os.path.isfile("Log"):
             open("Log", "w").close()
 
@@ -47,9 +59,11 @@ class Log:
         hour = current_time.hour
         minute = current_time.minute
         second = current_time.second
+        period = next((p for p, (start, end) in self.time_periods.items()
+                       if start <= hour < end or (start == 23 and hour == 0)), "")
         am_pm = "上午" if hour < 12 else "下午"
         hour_12 = hour % 12 or 12
-        return f"{current_time.year}/{current_time.month}/{current_time.day} {am_pm} {hour_12}:{minute}:{second}"
+        return f"{current_time.year}/{current_time.month}/{current_time.day} {am_pm} {hour_12}:{minute}:{second} 「{period}」"
 
     @staticmethod
     def __write__(msg: str):
