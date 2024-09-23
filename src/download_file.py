@@ -1,5 +1,5 @@
 import os
-from main import log                    # type: ignore
+from log import Log; log = Log()
 import requests, time
 from alive_progress import alive_bar
 

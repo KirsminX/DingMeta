@@ -1,9 +1,7 @@
-import os.path
 from prompt_toolkit import prompt
-from prompt_toolkit import print_formatted_text as print
-from parse_config import Config
-from main import log                                        # type: ignore
+from log import Log; log = Log()
 import sys
+
 
 class Console:
     def __init__(self):

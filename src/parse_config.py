@@ -1,13 +1,11 @@
 import os
-from shutil import rmtree
-
 import rtoml
-from errors import NoInitConfigError
 # from sanic
-from main import log # type: ignore
+from log import Log; log = Log()
 from console import ask_prompt
 import shutil
 import sys
+
 """配置文件内容"""
 CONFIG = """
 # DingMeta 配置文件 0.0.1
@@ -60,10 +58,15 @@ server = ["https://gitcode/KirsminX/DingMeta/Plugins","https://gitlab.com/Kirsmi
 registry =[{name = "Ping", version = "1.0.0", description = "网络测试插件", author = "Kirsmin", license = "MIT", time = "2024/8/19 19:12"}]
 """
 
+
 class Config:
     def __init__(self):
         self.data = None
-
+        self.__get_config__()
+    def getter(self, table: str, key: str = None):
+        if key is None:
+            return self.data[table]
+        return self.data[table][key]
     def __get_config__(self):
         try:
             with open ("Config.toml", "r", encoding="utf-8") as config:
@@ -72,9 +75,7 @@ class Config:
             log.error("无权限读取 Config.toml！请正确配置权限后再运行 Console")
             sys.exit(1)
         except FileNotFoundError:
-            log.warning("配置文件不存在！")
             Config.__create_config__()
-            log.info("创建配置文件！")
         except UnicodeDecodeError:
             log.error("Config.toml 的编码格式不正确！请使用 UTF-8 编码")
             user_agent = ask_prompt("处理错误", {"1": "退出 Console", "2": "删除文件、重新创建配置文件"}, "1")
