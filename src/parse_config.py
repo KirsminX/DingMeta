@@ -104,6 +104,83 @@ class Config:
                 os.remove("Config.toml")
                 Config.__create_config__()
                 log.info("创建配置文件！")
+
+    def validate(self):
+        errors = []
+
+        expected_schema = {
+            "Console": {
+                "user_name": str,
+                "time_zone": str,
+                "type": str,
+                "Log": {
+                    "debug": bool,
+                    "log_mode": str,
+                },
+                "Update": {
+                    "auto_update": bool,
+                    "interval": int,
+                    "server": list
+                }
+            },
+            "Plugin": {
+                "auto_update": bool,
+                "interval": int,
+                "server": list,
+                "Registry": {
+                    "registry": list  # 这里应该是字典列表
+                }
+            }
+        }
+
+        if "Console" in self.data:
+            errors += self.__validate_section__(self.data["Console"], expected_schema["Console"], "Console")
+        else:
+            errors.append("缺少部分: Console")
+
+        if "Plugin" in self.data:
+            errors += self.__validate_section__(self.data["Plugin"], expected_schema["Plugin"], "Plugin")
+        else:
+            errors.append("缺少部分: Plugin")
+        if "Bot" in self.data:
+            for bot_name, bot_config in self.data["Bot"].items():
+                errors += self.__validate_bot__(bot_name, bot_config)
+        return errors
+    def __validate_section__(self, data, schema, section_name):
+        errors = []
+        for key, expected_type in schema.items():
+            if key not in data:
+                errors.append(f"缺少键: {section_name}.{key}")
+            else:
+                if isinstance(expected_type, dict):
+                    errors += self.__validate_section__(data[key], expected_type, f"{section_name}.{key}")
+                elif not isinstance(data[key], expected_type):
+                    errors.append(
+                        f"{section_name}.{key} 类型错误: 期望 {expected_type.__name__}, 实际 {type(data[key]).__name__}")
+        return errors
+    @staticmethod
+    def __validate_bot__(bot_name, bot_config):
+        errors = []
+        bot_schema = {
+            "name": str,
+            "connect_type": str,
+            "token": str,
+            "port": int,
+            "no_generate_certs": bool
+        }
+
+        if not isinstance(bot_config, dict):
+            errors.append(f"无效的 Bot 配置: {bot_name} 不是一个字典")
+            return errors
+        for key, expected_type in bot_schema.items():
+            if key not in bot_config:
+                errors.append(f"Bot.{bot_name} 缺少键: {key}")
+            else:
+                if not isinstance(bot_config[key], expected_type):
+                    errors.append(
+                        f"Bot.{bot_name}.{key} 类型错误: 期望 {expected_type.__name__}, 实际 {type(bot_config[key]).__name__}")
+
+        return errors
     @staticmethod
     def __create_config__():
         with open("Config.toml", "w", encoding="utf-8") as config:
