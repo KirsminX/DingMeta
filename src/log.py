@@ -1,4 +1,6 @@
 import os
+import asyncio
+import aiofiles
 from datetime import datetime
 import pytz
 
@@ -15,7 +17,7 @@ class Log:
 
     def __init__(self, debug: bool = False, written: bool = True, memorize: bool = True,
                  timezone: str = "Asia/Shanghai"):
-        if not hasattr(self, 'initialized'):  # 防止 __init__ 被多次调用
+        if not hasattr(self, 'initialized'):
             self.written = written
             self.memorize = memorize
             self.logs = []
@@ -46,11 +48,11 @@ class Log:
 
         return current_time.strftime(f"%Y/%m/%d %p %I:%M:%S 「{period}」")
 
-    def __write__(self, msg: str):
-        with open(self.log_file, "a") as file:
-            file.write(f"{msg}\n")
+    async def __write__(self, msg: str):
+        async with aiofiles.open(self.log_file, "a") as file:
+            await file.write(f"{msg}\n")
 
-    def log(self, level: str, msg: str):
+    async def log(self, level: str, msg: str):
         level = level.upper()
         if level not in self.color:
             raise ValueError(f"不允许未知日志级别 {level}")
@@ -62,20 +64,27 @@ class Log:
         print(display_msg)
 
         if self.written:
-            self.__write__(formatted_msg)
+            await self.__write__(formatted_msg)
 
         if self.memorize:
             self.logs.append(formatted_msg)
 
-    def info(self, msg: str):
-        self.log("INFO", msg)
+    async def info(self, msg: str):
+        await self.log("INFO", msg)
 
-    def debug(self, msg: str):
+    async def debug(self, msg: str):
         if self.debug_statu:
-            self.log("DEBUG", msg)
+            await self.log("DEBUG", msg)
 
-    def warning(self, msg: str):
-        self.log("WARNING", msg)
+    async def warning(self, msg: str):
+        await self.log("WARNING", msg)
 
-    def error(self, msg: str):
-        self.log("ERROR", msg)
+    async def error(self, msg: str):
+        await self.log("ERROR", msg)
+
+if __name__ == "__main__":
+    log = Log()
+
+    async def main():
+        await log.info("Hello World!")
+    asyncio.run(main())
