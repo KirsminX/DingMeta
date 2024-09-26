@@ -39,8 +39,11 @@ class Log:
 
     def __get_formatted_time__(self) -> str:
         current_time = datetime.now(pytz.timezone(self.timezone))
-        period = next((p for p, (start, end) in self.time_periods.items()
-                       if start <= current_time.hour < end or (start == 23 and current_time.hour == 0)), "")
+        hour = current_time.hour
+        period = next(
+            (p for p, (start, end) in self.time_periods.items()
+             if start <= hour < (end % 24)), "")
+
         return current_time.strftime(f"%Y/%m/%d %p %I:%M:%S 「{period}」")
 
     def __write__(self, msg: str):
