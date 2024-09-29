@@ -7,8 +7,7 @@ import shutil
 import sys
 
 """配置文件内容"""
-CONFIG = """
-# DingMeta 配置文件 0.0.1
+CONFIG = """# DingMeta 配置文件 0.0.1
 # 修改前务必阅读注释
 
 # 控制台配置
@@ -60,17 +59,25 @@ registry =[{name = "Ping", version = "1.0.0", description = "网络测试插件"
 
 
 class Config:
+    _instance = None
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(Config, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self):
-        self.data = None
-        self.__get_config__()
+        if not hasattr(self, 'initialized'):
+            self.data = None
+            self.__get_config__()
+            self.initialized = True
     def getter(self, table: str, key: str = None):
         if key is None:
             return self.data[table]
         return self.data[table][key]
     def __get_config__(self):
         try:
-            with open ("Config.toml", "r", encoding="utf-8") as config:
-                self.data = rtoml.load(config)
+            with open ("Config.toml", "r", encoding="utf-8") as conf:
+                self.data = rtoml.load(conf)
         except PermissionError:
             log.error("无权限读取 Config.toml！请正确配置权限后再运行 Console")
             sys.exit(1)
@@ -136,27 +143,43 @@ class Config:
         if "Console" in self.data:
             errors += self.__validate_section__(self.data["Console"], expected_schema["Console"], "Console")
         else:
-            errors.append("缺少部分: Console")
+            errors.append("缺少 [Console]")
 
         if "Plugin" in self.data:
             errors += self.__validate_section__(self.data["Plugin"], expected_schema["Plugin"], "Plugin")
         else:
-            errors.append("缺少部分: Plugin")
+            errors.append("缺少 [Plugin]")
         if "Bot" in self.data:
             for bot_name, bot_config in self.data["Bot"].items():
                 errors += self.__validate_bot__(bot_name, bot_config)
-        return errors
+
+        if errors:
+            log.error("配置文件格式不正确！以下是错误信息：")
+            log.error("┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓")
+            for error in errors:
+                log.error(error)
+            log.error("┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛")
+            user_choose = ask_prompt("处理错误", {"1": "退出 Console，手动处理", "2": "删除目录、重新创建配置文件"}, "1")
+            if user_choose == "2":
+                os.remove("Config.toml")
+                Config.__create_config__()
+                log.info("创建配置文件！")
+                self.validate()
+            else:
+                log.error("退出 Console！")
+                sys.exit(1)
+        return True
     def __validate_section__(self, data, schema, section_name):
         errors = []
         for key, expected_type in schema.items():
             if key not in data:
-                errors.append(f"缺少键: {section_name}.{key}")
+                errors.append(f"缺少键 {section_name}.{key}")
             else:
                 if isinstance(expected_type, dict):
                     errors += self.__validate_section__(data[key], expected_type, f"{section_name}.{key}")
                 elif not isinstance(data[key], expected_type):
                     errors.append(
-                        f"{section_name}.{key} 类型错误: 期望 {expected_type.__name__}, 实际 {type(data[key]).__name__}")
+                        f"{section_name}.{key} 类型错误：期望 {expected_type.__name__}, 实际 {type(data[key]).__name__}")
         return errors
     @staticmethod
     def __validate_bot__(bot_name, bot_config):
@@ -170,18 +193,21 @@ class Config:
         }
 
         if not isinstance(bot_config, dict):
-            errors.append(f"无效的 Bot 配置: {bot_name} 不是一个字典")
+            errors.append(f"无效的 Bot 配置：{bot_name} 不是一个字典")
             return errors
         for key, expected_type in bot_schema.items():
             if key not in bot_config:
-                errors.append(f"Bot.{bot_name} 缺少键: {key}")
+                errors.append(f"Bot.{bot_name} 缺少键：{key}")
             else:
                 if not isinstance(bot_config[key], expected_type):
                     errors.append(
-                        f"Bot.{bot_name}.{key} 类型错误: 期望 {expected_type.__name__}, 实际 {type(bot_config[key]).__name__}")
+                        f"Bot.{bot_name}.{key} 类型错误：期望 {expected_type.__name__}, 实际 {type(bot_config[key]).__name__}")
 
         return errors
     @staticmethod
     def __create_config__():
-        with open("Config.toml", "w", encoding="utf-8") as config:
-            config.write(CONFIG)
+        with open("Config.toml", "w", encoding="utf-8") as conf:
+            conf.write(CONFIG)
+
+if __name__ == "__main__":
+    config = Config()
