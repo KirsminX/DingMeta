@@ -1,7 +1,7 @@
 import os
-import asyncio
-import aiofiles
 from datetime import datetime
+
+import aiofiles
 import pytz
 
 """
@@ -81,10 +81,3 @@ class Log:
 
     async def error(self, msg: str):
         await self.log("ERROR", msg)
-
-if __name__ == "__main__":
-    log = Log()
-
-    async def main():
-        await log.info("Hello World!")
-    asyncio.run(main())
