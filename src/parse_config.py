@@ -60,6 +60,7 @@ registry =[{name = "Ping", version = "1.0.0", description = "网络测试插件"
 
 class Config:
     _instance = None
+
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = super(Config, cls).__new__(cls)
@@ -68,53 +69,48 @@ class Config:
     def __init__(self):
         if not hasattr(self, 'initialized'):
             self.data = None
-            self.__get_config__()
+            self.__initialize_config__()
             self.initialized = True
-    def getter(self, table: str, key: str = None):
-        if key is None:
-            return self.data[table]
-        return self.data[table][key]
-    def __get_config__(self):
+
+    def __initialize_config__(self):
+        if not os.path.exists("Config.toml"):
+            self.__create_config__()
+        self.__load_config__()
+        self.validate()
+
+    def __load_config__(self):
         try:
-            with open ("Config.toml", "r", encoding="utf-8") as conf:
+            with open("Config.toml", "r", encoding="utf-8") as conf:
                 self.data = rtoml.load(conf)
-        except PermissionError:
-            log.error("无权限读取 Config.toml！请正确配置权限后再运行 Console")
+        except (PermissionError, FileNotFoundError):
+            log.error(f"配置文件权限错误或不存在！请手动修复后再启动 Console")
             sys.exit(1)
-        except FileNotFoundError:
-            Config.__create_config__()
-        except UnicodeDecodeError:
-            log.error("Config.toml 的编码格式不正确！请使用 UTF-8 编码")
-            user_agent = ask_prompt("处理错误", {"1": "退出 Console", "2": "删除文件、重新创建配置文件"}, "1")
-            if user_agent == "1":
-                sys.exit(1)
-            else:
-                os.remove("Config.toml")
-                Config.__create_config__()
-                log.info("创建配置文件！")
-        except IsADirectoryError:
-            log.error("Config.toml 是一个目录，而不是配置文件！")
-            user_choose = ask_prompt("处理错误", {"1": "退出 Console", "2": "删除目录、重新创建配置文件"}, "1")
-            if user_choose == "1":
-                sys.exit(1)
-            else:
+        except (UnicodeDecodeError, IsADirectoryError, rtoml.TomlParsingError) as e:
+            log.error(f"配置文件无法正确解析，错误信息：{e}")
+            self.__handle_invalid_config__()
+
+    def __handle_invalid_config__(self):
+        user_action = ask_prompt("处理错误", {"1": "退出 Console", "2": "重新创建配置文件"}, "1")
+        if user_action == "1":
+            sys.exit(1)
+        else:
+            if os.path.isdir("Config.toml"):
                 shutil.rmtree("Config.toml")
-                log.warning("删除目录！")
-                Config.__create_config__()
-                log.info("创建配置文件！")
-        except rtoml.TomlParsingError:
-            log.error("Config.toml 格式不正确！")
-            user_choose = ask_prompt("处理错误", {"1": "退出 Console", "2": "删除文件、重新创建配置文件"}, "1")
-            if user_choose == "1":
-                sys.exit(1)
+                log.warning(f"删除目录「Config.toml」并重新创建配置文件！")
             else:
                 os.remove("Config.toml")
-                Config.__create_config__()
-                log.info("创建配置文件！")
+                log.warning(f"删除配置文件并重新创建配置文件！")
+            self.__create_config__()
+            self.__load_config__()
+
+    def getter(self, table: str, key: str = None):
+        try:
+            return self.data[table] if key is None else self.data[table][key]
+        except KeyError:
+            log.error(f"无法找到配置项: [{table}][{key}]")
+            return None
 
     def validate(self):
-        errors = []
-
         expected_schema = {
             "Console": {
                 "user_name": str,
@@ -135,79 +131,32 @@ class Config:
                 "interval": int,
                 "server": list,
                 "Registry": {
-                    "registry": list  # 这里应该是字典列表
+                    "registry": list
                 }
             }
         }
-
-        if "Console" in self.data:
-            errors += self.__validate_section__(self.data["Console"], expected_schema["Console"], "Console")
-        else:
-            errors.append("缺少 [Console]")
-
-        if "Plugin" in self.data:
-            errors += self.__validate_section__(self.data["Plugin"], expected_schema["Plugin"], "Plugin")
-        else:
-            errors.append("缺少 [Plugin]")
-        if "Bot" in self.data:
-            for bot_name, bot_config in self.data["Bot"].items():
-                errors += self.__validate_bot__(bot_name, bot_config)
-
+        errors = self.__validate_section__(self.data, expected_schema)
         if errors:
             log.error("配置文件格式不正确！以下是错误信息：")
-            log.error("┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓")
             for error in errors:
                 log.error(error)
-            log.error("┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛")
-            user_choose = ask_prompt("处理错误", {"1": "退出 Console，手动处理", "2": "删除目录、重新创建配置文件"}, "1")
-            if user_choose == "2":
-                os.remove("Config.toml")
-                Config.__create_config__()
-                log.info("创建配置文件！")
-                self.validate()
-            else:
-                log.error("退出 Console！")
-                sys.exit(1)
-        return True
-    def __validate_section__(self, data, schema, section_name):
+            self.__handle_invalid_config__()
+
+    def __validate_section__(self, data, schema, section_name=""):
         errors = []
         for key, expected_type in schema.items():
             if key not in data:
                 errors.append(f"缺少键 {section_name}.{key}")
-            else:
-                if isinstance(expected_type, dict):
-                    errors += self.__validate_section__(data[key], expected_type, f"{section_name}.{key}")
-                elif not isinstance(data[key], expected_type):
-                    errors.append(
-                        f"{section_name}.{key} 类型错误：期望 {expected_type.__name__}, 实际 {type(data[key]).__name__}")
+            elif isinstance(expected_type, dict):
+                errors += self.__validate_section__(data[key], expected_type, f"{section_name}.{key}")
+            elif not isinstance(data[key], expected_type):
+                errors.append(
+                    f"{section_name}.{key} 类型错误：期望 {expected_type.__name__}, 实际 {type(data[key]).__name__}")
         return errors
-    @staticmethod
-    def __validate_bot__(bot_name, bot_config):
-        errors = []
-        bot_schema = {
-            "name": str,
-            "connect_type": str,
-            "token": str,
-            "port": int,
-            "no_generate_certs": bool
-        }
 
-        if not isinstance(bot_config, dict):
-            errors.append(f"无效的 Bot 配置：{bot_name} 不是一个字典")
-            return errors
-        for key, expected_type in bot_schema.items():
-            if key not in bot_config:
-                errors.append(f"Bot.{bot_name} 缺少键：{key}")
-            else:
-                if not isinstance(bot_config[key], expected_type):
-                    errors.append(
-                        f"Bot.{bot_name}.{key} 类型错误：期望 {expected_type.__name__}, 实际 {type(bot_config[key]).__name__}")
-
-        return errors
     @staticmethod
     def __create_config__():
         with open("Config.toml", "w", encoding="utf-8") as conf:
             conf.write(CONFIG)
-
 if __name__ == "__main__":
     config = Config()
