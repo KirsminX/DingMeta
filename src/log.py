@@ -1,7 +1,5 @@
 import os
 from datetime import datetime
-
-import aiofiles
 import pytz
 
 """
@@ -48,11 +46,11 @@ class Log:
 
         return current_time.strftime(f"%Y/%m/%d %p %I:%M:%S 「{period}」")
 
-    async def __write__(self, msg: str):
-        async with aiofiles.open(self.log_file, "a") as file:
-            await file.write(f"{msg}\n")
+    def __write__(self, msg: str):
+        with open(self.log_file, "a") as file:
+            file.write(f"{msg}\n")
 
-    async def log(self, level: str, msg: str):
+    def log(self, level: str, msg: str):
         level = level.upper()
         if level not in self.color:
             raise ValueError(f"不允许未知日志级别 {level}")
@@ -64,20 +62,28 @@ class Log:
         print(display_msg)
 
         if self.written:
-            await self.__write__(formatted_msg)
+            self.__write__(formatted_msg)
 
         if self.memorize:
             self.logs.append(formatted_msg)
 
-    async def info(self, msg: str):
-        await self.log("INFO", msg)
+    def info(self, msg: str):
+        self.log("INFO", msg)
 
-    async def debug(self, msg: str):
+    def debug(self, msg: str):
         if self.debug_statu:
-            await self.log("DEBUG", msg)
+            self.log("DEBUG", msg)
 
-    async def warning(self, msg: str):
-        await self.log("WARNING", msg)
+    def warning(self, msg: str):
+        self.log("WARNING", msg)
 
-    async def error(self, msg: str):
-        await self.log("ERROR", msg)
+    def error(self, msg: str):
+        self.log("ERROR", msg)
+
+# 示例使用
+if __name__ == "__main__":
+    log = Log(debug=True, written=True, memorize=True, timezone="Asia/Shanghai")
+    log.info("Hello, this is an info message.")
+    log.debug("This is a debug message.")
+    log.warning("This is a warning message.")
+    log.error("This is an error message.")
