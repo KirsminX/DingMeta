@@ -33,6 +33,12 @@ class Log:
                 "辰": (7, 9), "巳": (9, 11), "午": (11, 13), "未": (13, 15),
                 "申": (15, 17), "酉": (17, 19), "戌": (19, 21), "亥": (21, 23)
             }
+            self.level_mapping = {
+                "INFO": "信息",
+                "WARNING": "警告",
+                "ERROR": "错误",
+                "DEBUG": "调试"
+            }
             if self.written and not os.path.isfile(self.log_file):
                 open(self.log_file, "w").close()
             self.initialized = True
@@ -59,7 +65,7 @@ class Log:
             raise ValueError(f"不允许未知日志级别 {level}")
 
         formatted_time = self.__get_formatted_time__()
-        formatted_msg = f"{formatted_time} [{level}] {msg}"
+        formatted_msg = f"{formatted_time} [{self.level_mapping[level]}] {msg}"
         display_msg = f"{formatted_time} {self.color[level]} {msg}"
 
         print(display_msg)
@@ -86,7 +92,8 @@ class Log:
 # 示例使用
 if __name__ == "__main__":
     log = Log(debug=True, written=True, memorize=True, timezone="Asia/Shanghai")
-    log.info("Hello, this is an info message.")
-    log.debug("This is a debug message.")
-    log.warning("This is a warning message.")
-    log.error("This is an error message.")
+    log.debug("这是调试信息")
+    log.info("这是普通信息")
+    log.warning("这是警告信息")
+    log.error("这是错误信息")
+    log.log("INFO", "- END -")
