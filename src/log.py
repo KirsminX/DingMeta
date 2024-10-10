@@ -42,9 +42,12 @@ class Log:
         hour = current_time.hour
         period = next(
             (p for p, (start, end) in self.time_periods.items()
-             if start <= hour < (end % 24)), "")
+             if (start <= hour < end) or (start > end and (hour >= start or hour < end))),
+            ""
+        )
 
-        return current_time.strftime(f"%Y/%m/%d %p %I:%M:%S 「{period}」")
+        am_pm = "上午" if current_time.strftime("%p") == "AM" else "下午"
+        return current_time.strftime(f"%Y/%m/%d {am_pm} %I:%M:%S 「{period}」")
 
     def __write__(self, msg: str):
         with open(self.log_file, "a") as file:
