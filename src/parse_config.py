@@ -1,10 +1,13 @@
 import os
+
+import pytz
 import rtoml
 # from sanic
 from log import Log; log = Log()
-from console import ask_prompt
+from ask import ask
 import shutil
 import sys
+import re
 
 """配置文件内容"""
 CONFIG = """# DingMeta 配置文件 0.0.1
@@ -90,7 +93,7 @@ class Config:
             self.__handle_invalid_config__()
 
     def __handle_invalid_config__(self):
-        user_action = ask_prompt("处理错误", {"1": "退出 Console", "2": "重新创建配置文件"}, "1")
+        user_action = ask("处理错误", {"1": "退出 Console", "2": "重置配置文件"})
         if user_action == "1":
             sys.exit(1)
         else:
@@ -152,8 +155,45 @@ class Config:
             elif not isinstance(data[key], expected_type):
                 errors.append(
                     f"{section_name}.{key} 类型错误：期望 {expected_type.__name__}, 实际 {type(data[key]).__name__}")
-        return errors
+        # 匹配网址
+        url_pattern = re.compile(r'^https?://[^\s/]+(?:\.[^\s/]+)+(:\d{1,5})?(?:\S*[^/\s])?$')
 
+        # 验证 Console 部分
+        if (tz := self.data.get('Console', {}).get('time_zone', '')) not in pytz.all_timezones:
+            errors.append(f"无效的时区: {tz}")
+
+        # 验证 Console.Log 部分
+        console_log = self.data.get('Console', {}).get('Log', {})
+        if (level := console_log.get('log_level', '')) not in ['info', 'debug']:
+            errors.append(f"无效的日志级别: {level}")
+        if (mode := console_log.get('log_mode', '')) not in ['file', 'memory']:
+            errors.append(f"无效的日志模式: {mode}")
+
+        # 验证 Console.Update 部分
+        update = self.data.get('Console', {}).get('Update', {})
+        if (interval := update.get('interval', 0)) <= 10:
+            errors.append(f"无效的更新间隔: {interval}")
+        for url in update.get('server', []):
+            if not url or not url_pattern.match(url):
+                errors.append(f"无效的服务器地址: {url}")
+
+        # 验证 Plugin 部分
+        if (interval := self.data.get('Plugin', {}).get('interval', 0)) <= 10:
+            errors.append(f"无效的插件间隔: {interval}")
+        for url in self.data.get('Plugin', {}).get('server', []):
+            if not url or not url_pattern.match(url):
+                errors.append(f"无效的服务器地址: {url}")
+
+        # 验证 Bot.* 部分
+        for bot_name, bot_data in self.data.get('Bot', {}).items():
+            if (connect_type := bot_data.get('connect_type', '')) not in ['http', 'stream']:
+                errors.append(f"无效的连接类型: {connect_type} ({bot_name})")
+            if (port := bot_data.get('port', -1)) not in range(65536):
+                errors.append(f"无效的端口号: {port} ({bot_name})")
+
+        # 对错误信息进行去重
+        errors = list(set(errors))
+        return errors
     @staticmethod
     def __create_config__():
         with open("Config.toml", "w", encoding="utf-8") as conf:
