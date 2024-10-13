@@ -8,6 +8,7 @@ from ask import ask
 import shutil
 import sys
 import re
+from typing import Dict, Any
 
 """配置文件内容"""
 CONFIG = """# DingMeta 配置文件 0.0.1
@@ -86,7 +87,7 @@ class Config:
             with open("Config.toml", "r", encoding="utf-8") as conf:
                 self.data = rtoml.load(conf)
         except (PermissionError, FileNotFoundError):
-            log.error(f"配置文件权限错误或不存在！请手动修复后再启动 Console")
+            log.error("配置文件权限错误或不存在！请手动修复后再启动 Console")
             sys.exit(1)
         except (UnicodeDecodeError, IsADirectoryError, rtoml.TomlParsingError) as e:
             log.error(f"配置文件无法正确解析，错误信息：{e}")
@@ -99,10 +100,10 @@ class Config:
         else:
             if os.path.isdir("Config.toml"):
                 shutil.rmtree("Config.toml")
-                log.warning(f"删除目录「Config.toml」并重新创建配置文件！")
+                log.warning("删除目录「Config.toml」并重新创建配置文件！")
             else:
                 os.remove("Config.toml")
-                log.warning(f"删除配置文件并重新创建配置文件！")
+                log.warning("删除配置文件并重新创建配置文件！")
             self.__create_config__()
             self.__load_config__()
 
@@ -110,10 +111,22 @@ class Config:
         try:
             return self.data[table] if key is None else self.data[table][key]
         except KeyError:
-            log.error(f"无法找到配置项: [{table}][{key}]")
+            log.error(f"无法找到配置项：[{table}][{key}]")
             return None
 
     def validate(self):
+        errors = []
+        errors.extend(self.__validate_structure__())
+        errors.extend(self.__validate_values__())
+        errors.extend(self.__validate_bot__())
+
+        if errors:
+            log.error("配置文件格式不正确！以下是错误信息：")
+            for error in errors:
+                log.error(error)
+            self.__handle_invalid_config__()
+
+    def __validate_structure__(self):
         expected_schema = {
             "Console": {
                 "user_name": str,
@@ -138,62 +151,73 @@ class Config:
                 }
             }
         }
-        errors = self.__validate_section__(self.data, expected_schema)
-        if errors:
-            log.error("配置文件格式不正确！以下是错误信息：")
-            for error in errors:
-                log.error(error)
-            self.__handle_invalid_config__()
+        return self.__validate_section__(self.data, expected_schema)
 
-    def __validate_section__(self, data, schema, section_name=""):
+    def __validate_section__(self, data: Dict[str, Any], schema: Dict[str, Any], path: str = "") -> list:
         errors = []
         for key, expected_type in schema.items():
+            current_path = f"{path}.{key}" if path else key
             if key not in data:
-                errors.append(f"缺少键 {section_name}.{key}")
+                errors.append(f"缺少键：{current_path}")
             elif isinstance(expected_type, dict):
-                errors += self.__validate_section__(data[key], expected_type, f"{section_name}.{key}")
+                errors.extend(self.__validate_section__(data[key], expected_type, current_path))
             elif not isinstance(data[key], expected_type):
-                errors.append(
-                    f"{section_name}.{key} 类型错误：期望 {expected_type.__name__}, 实际 {type(data[key]).__name__}")
-        # 匹配网址
-        url_pattern = re.compile(r'^https?://[^\s/]+(?:\.[^\s/]+)+(:\d{1,5})?(?:\S*[^/\s])?$')
-
-        # 验证 Console 部分
-        if (tz := self.data.get('Console', {}).get('time_zone', '')) not in pytz.all_timezones:
-            errors.append(f"无效的时区: {tz}")
-
-        # 验证 Console.Log 部分
-        console_log = self.data.get('Console', {}).get('Log', {})
-        if (level := console_log.get('log_level', '')) not in ['info', 'debug']:
-            errors.append(f"无效的日志级别: {level}")
-        if (mode := console_log.get('log_mode', '')) not in ['file', 'memory']:
-            errors.append(f"无效的日志模式: {mode}")
-
-        # 验证 Console.Update 部分
-        update = self.data.get('Console', {}).get('Update', {})
-        if (interval := update.get('interval', 0)) <= 10:
-            errors.append(f"无效的更新间隔: {interval}")
-        for url in update.get('server', []):
-            if not url or not url_pattern.match(url):
-                errors.append(f"无效的服务器地址: {url}")
-
-        # 验证 Plugin 部分
-        if (interval := self.data.get('Plugin', {}).get('interval', 0)) <= 10:
-            errors.append(f"无效的插件间隔: {interval}")
-        for url in self.data.get('Plugin', {}).get('server', []):
-            if not url or not url_pattern.match(url):
-                errors.append(f"无效的服务器地址: {url}")
-
-        # 验证 Bot.* 部分
-        for bot_name, bot_data in self.data.get('Bot', {}).items():
-            if (connect_type := bot_data.get('connect_type', '')) not in ['http', 'stream']:
-                errors.append(f"无效的连接类型: {connect_type} ({bot_name})")
-            if (port := bot_data.get('port', -1)) not in range(65536):
-                errors.append(f"无效的端口号: {port} ({bot_name})")
-
-        # 对错误信息进行去重
-        errors = list(set(errors))
+                errors.append(f"{current_path} 类型错误：期望 {expected_type.__name__}，实际 {type(data[key]).__name__}")
         return errors
+
+    def __validate_values__(self):
+        errors = []
+        url_pattern = re.compile(r'^https?://[^\s/]+(?:\.[^\s/]+)+(?::\d{1,5})?(?:/\S*)?$')
+
+        if self.data.get('Console', {}).get('time_zone') not in pytz.all_timezones:
+            errors.append(f"无效的时区：{self.data['Console']['time_zone']}")
+
+        console_log = self.data.get('Console', {}).get('Log', {})
+        if console_log.get('log_level') not in ['info', 'debug']:
+            errors.append(f"无效的日志级别：{console_log.get('log_level')}")
+        if console_log.get('log_mode') not in ['file', 'memory']:
+            errors.append(f"无效的日志模式：{console_log.get('log_mode')}")
+
+        update = self.data.get('Console', {}).get('Update', {})
+        if update.get('interval', 0) <= 10:
+            errors.append(f"无效的更新间隔：{update.get('interval')}")
+        for url in update.get('server', []):
+            if not url_pattern.match(url):
+                errors.append(f"无效的服务器地址：{url}")
+            elif url.endswith('/'):
+                errors.append(f"无效的服务器地址（尾随 /）：{url}")
+
+        plugin = self.data.get('Plugin', {})
+        if plugin.get('interval', 0) <= 10:
+            errors.append(f"无效的插件间隔：{plugin.get('interval')}")
+        for url in plugin.get('server', []):
+            if not url_pattern.match(url):
+                errors.append(f"无效的服务器地址：{url}")
+            elif url.endswith('/'):
+                errors.append(f"无效的服务器地址（尾随 /）：{url}")
+
+        return errors
+
+    def __validate_bot__(self):
+        errors = []
+        bot_schema = {
+            "name": str,
+            "connect_type": str,
+            "token": str,
+            "port": int,
+            "generate_certs": bool
+        }
+        for bot_name, bot_data in self.data.get('Bot', {}).items():
+            bot_errors = self.__validate_section__(bot_data, bot_schema, f"Bot.{bot_name}")
+            errors.extend(bot_errors)
+
+            if bot_data.get('connect_type') not in ['http', 'stream']:
+                errors.append(f"无效的连接类型：{bot_data.get('connect_type')}（Bot.{bot_name}）")
+            if not 0 <= bot_data.get('port', -1) < 65536:
+                errors.append(f"无效的端口号：{bot_data.get('port')}（Bot.{bot_name}）")
+
+        return errors
+
     @staticmethod
     def __create_config__():
         with open("Config.toml", "w", encoding="utf-8") as conf:
