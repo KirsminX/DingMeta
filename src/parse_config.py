@@ -11,27 +11,32 @@ import re
 from typing import Dict, Any
 
 """配置文件内容"""
-CONFIG = """# DingMeta 配置文件 0.0.1
+CONFIG = """# DingMeta 配置文件 0.0.2
 # 修改前务必阅读注释
 
 # 控制台配置
 [Console]
-user_name = "-"                     # 用户名（请修改）
+user_name = "-"                     # 用户名
 time_zone = "Asia/Shanghai"         # 时区（默认：Asia/Shanghai「上海时间」）
 type = "Standard"                   # 版本（默认：Standard，可选 Standard「稳定版」/Beta「开发版」；此配置影响自动更新）
 
 [Console.Log]
-debug = false                       # 调试模式（默认：false，可选 true/false；请在报告 bug 之前设置为 true）
-log_level = "info"                  # 日志级别（默认：info，可选 info/debug；请在报告 bug 之前设置为 debug）
+# 调试模式（默认：false，可选 true/false；开启调试模式后，日志等级将修改为 debug）
+# 请在提交 bug 之前设置为 true
+debug = false
 log_mode = "file"                   # 日志模式（默认：file，可选 file「写入文件」/memory「写入内存」；请在报告 bug 之前设置为 file）
+log_level = "info"                  # 日志等级（默认：info，可选 info/debug，请在提交 bug 之前设置为 debug）
 
 # 更新配置
 [Console.Update]
-auto_update = true          # 自动更新（默认：true，可选 true/false）
-interval = 500              # 更新间隔（默认：500，单位：秒）
-# 更新服务器（默认使用第一个）
-# 目前已经配置自动镜像，大概2分钟左右同步一次
-server = ["https://gitcode.com/KirsminX/DingMet","https://gitlab.com/KirsminX/dingmeta","https://github.com/KirsminX/DingMeta"]
+auto_update = true                  # 自动更新（默认：true，可选 true/false）
+interval = 60                       # 更新间隔（默认：60，单位：分钟，范围：10-1000000）
+# 更新服务器（不分先后）
+server = ["https://gitcode.com/KirsminX/DingMeta","https://gitlab.com/KirsminX/DingMeta","https://github.com/KirsminX/DingMeta"]
+# 默认服务器（在首次启动时会自动选择最优服务器）
+# 如果你认为自动选择的服务器速度慢，请使用命令 update server 重新自动选择服务器
+# 或者使用命令 update server <server_url> 手动选择服务器
+default_server = "https://gitcode.com/KirsminX/DingMeta"
 
 # 机器人配置
 [Bot]
@@ -47,19 +52,18 @@ server = ["https://gitcode.com/KirsminX/DingMet","https://gitlab.com/KirsminX/di
 #    # SSL 设置
 #    # HTTP 已不再被支持。若你希望使用受信任的SSL证书，你需要在将密钥、公钥放在/Config下，分别命名为 key.pem 和 cert.pem
 #    # 手动设置证书请将 no_generate_certs 设置为 true，避免被覆盖
-#     no_generate_certs = false  # 不自动生成证书（默认：false，可选 true/false）
+#     generate_certs = false  # 不自动生成证书（默认：false，可选 true/false）
 
 # 插件配置
 [Plugin]
 auto_update = true                  # 自动更新插件（默认：true，可选 true/false）
-interval = 500                      # 更新间隔（默认：500，单位：秒）
+interval = 60                       # 更新间隔（默认：60，单位：分钟，范围：10-1000000）
 # 插件服务器（不分先后）
-server = ["https://gitcode/KirsminX/DingMeta/Plugins","https://gitlab.com/KirsminX/DingMeta/Plugins","https://github.com/KirsminX/DingMeta/Plugins"]
+server = ["https://gitcode.com/KirsminX/DingMeta/Plugins","https://gitlab.com/KirsminX/DingMeta/Plugins","https://github.com/KirsminX/DingMeta/Plugins"]
 # 插件注册表（请勿修改！以下字段自动生成）
 # 插件管理命令可以在 Console 中使用 help plugin 查看
 [Plugin.Registry]
-registry =[{name = "Ping", version = "1.0.0", description = "网络测试插件", author = "Kirsmin", license = "MIT", time = "2024/8/19 19:12"}]
-"""
+registry =[{name = "Ping", version = "1.0.0", description = "网络测试插件", author = "Kirsmin", license = "MIT", time = "2024/8/19 19:12"}]"""
 
 
 class Config:

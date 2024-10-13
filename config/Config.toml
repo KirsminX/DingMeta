@@ -12,6 +12,7 @@ type = "Standard"                   # 版本（默认：Standard，可选 Standa
 # 请在提交 bug 之前设置为 true
 debug = false
 log_mode = "file"                   # 日志模式（默认：file，可选 file「写入文件」/memory「写入内存」；请在报告 bug 之前设置为 file）
+log_level = "info"                  # 日志等级（默认：info，可选 info/debug，请在提交 bug 之前设置为 debug）
 
 # 更新配置
 [Console.Update]
@@ -45,7 +46,7 @@ default_server = "https://gitcode.com/KirsminX/DingMeta"
 auto_update = true                  # 自动更新插件（默认：true，可选 true/false）
 interval = 60                       # 更新间隔（默认：60，单位：分钟，范围：10-1000000）
 # 插件服务器（不分先后）
-server = ["https://gitcode/KirsminX/DingMeta/Plugins","https://gitlab.com/KirsminX/DingMeta/Plugins","https://github.com/KirsminX/DingMeta/Plugins"]
+server = ["https://gitcode.com/KirsminX/DingMeta/Plugins","https://gitlab.com/KirsminX/DingMeta/Plugins","https://github.com/KirsminX/DingMeta/Plugins"]
 # 插件注册表（请勿修改！以下字段自动生成）
 # 插件管理命令可以在 Console 中使用 help plugin 查看
 [Plugin.Registry]
