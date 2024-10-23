@@ -226,5 +226,25 @@ class Config:
     def __create_config__():
         with open("Config.toml", "w", encoding="utf-8") as conf:
             conf.write(CONFIG)
+
+    def change(self, table: str, key: str, value: Any):
+        try:
+            if key is None:
+                self.data[table] = value
+            else:
+                self.data[table][key] = value
+            self.__save_config__()
+            self.__load_config__()
+        except KeyError:
+            log.error(f"无法找到配置项：[{table}][{key}]")
+
+    def __save_config__(self):
+        try:
+            with open("Config.toml", "w", encoding="utf-8") as conf:
+                rtoml.dump(self.data, conf)
+        except (PermissionError, FileNotFoundError) as e:
+            log.error(f"无法保存配置文件，错误信息：{e}")
+            sys.exit(1)
+
 if __name__ == "__main__":
     config = Config()
