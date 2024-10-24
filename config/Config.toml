@@ -19,11 +19,23 @@ log_level = "info"                  # 日志等级（默认：info，可选 info
 auto_update = true                  # 自动更新（默认：true，可选 true/false）
 interval = 60                       # 更新间隔（默认：60，单位：分钟，范围：10-1000000）
 # 更新服务器（不分先后）
+# 使用命令 update server default 修改为默认值
 server = ["https://gitcode.com/KirsminX/DingMeta","https://gitlab.com/KirsminX/DingMeta","https://github.com/KirsminX/DingMeta"]
 # 默认服务器（在首次启动时会自动选择最优服务器）
 # 如果你认为自动选择的服务器速度慢，请使用命令 update server 重新自动选择服务器
 # 或者使用命令 update server <server_url> 手动选择服务器
 default_server = "https://gitcode.com/KirsminX/DingMeta"
+
+# 用户配置
+# 注意：控制台用户须在 [Console] 配置，可以使用 user rename console 重命名（即便你已经修改过用户名，重命名也需要使用 `console` 占位）
+#       console 用户是特殊用户，不会在数据库呈现，也不允许被调用、删除、修改权限组
+# 配置钉钉用户
+[User]
+# 数据库配置
+# 数据库使用 Sqlite3
+[User.Database]
+# 数据库路径，若不存在，将自动创建（默认：Database/User.db）
+path = "Database/User.db"
 
 # 机器人配置
 [Bot]
